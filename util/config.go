@@ -10,6 +10,10 @@ var (
 	EmailSubject   string
 	EmailContent   string
 	SessionSecret  []byte
+	Username	   string
+	Password	   string
+	MailHost	   string
+	MailPort       string
 )
 
 const (

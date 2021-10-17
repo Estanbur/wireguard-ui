@@ -29,6 +29,10 @@ var (
 	flagEmailFrom      string
 	flagEmailFromName  string = "WireGuard UI"
 	flagSessionSecret  string
+	flagUsername	   string
+	flagPassword	   string
+	flagMailHost	   string
+	flagMailPort       string
 )
 
 const (
@@ -48,6 +52,10 @@ func init() {
 	flag.StringVar(&flagEmailFrom, "email-from", util.LookupEnvOrString("EMAIL_FROM_ADDRESS", flagEmailFrom), "'From' email address.")
 	flag.StringVar(&flagEmailFromName, "email-from-name", util.LookupEnvOrString("EMAIL_FROM_NAME", flagEmailFromName), "'From' email name.")
 	flag.StringVar(&flagSessionSecret, "session-secret", util.LookupEnvOrString("SESSION_SECRET", flagSessionSecret), "The key used to encrypt session cookies.")
+	flag.StringVar(&flagUsername, "username", util.LookupEnvOrString("USERNAME", flagUsername), "Username for Mailserver")
+	flag.StringVar(&flagPassword, "password", util.LookupEnvOrString("PASSWORD", flagPassword), "Password for Mailserver")
+	flag.StringVar(&flagMailHost, "mail-host", util.LookupEnvOrString("MAIL_HOST", flagMailHost), "Hostaddress of Mailserver")
+	flag.StringVar(&flagMailPort, "mail-port", util.LookupEnvOrString("MAIL_PORT", flagMailPort), "Hostport for Mailserver")
 	flag.Parse()
 
 	// update runtime config
@@ -57,6 +65,10 @@ func init() {
 	util.EmailFrom = flagEmailFrom
 	util.EmailFromName = flagEmailFromName
 	util.SessionSecret = []byte(flagSessionSecret)
+	util.Username = flagUsername
+	util.Password = flagPassword
+	util.MailHost = flagMailHost
+	util.MailPort = flagMailPort
 
 	// print app information
 	fmt.Println("Wireguard UI")
@@ -102,12 +114,16 @@ func main() {
 		app.POST("/login", handler.Login(db))
 	}
 
-	sendmail := emailer.NewSendgridApiMail(util.SendgridApiKey, util.EmailFromName, util.EmailFrom)
+	//if util.Username == "" {
+	//	mail := emailer.NewSendgridApiMail(util.SendgridApiKey, util.EmailFromName, util.EmailFrom)
+	//} else {
+	mail := emailer.NewPlainLoggingMail(util.Username, util.Password, util.MailHost, util.MailPort)
+	//}
 
 	app.GET("/logout", handler.Logout(), handler.ValidSession)
 	app.POST("/new-client", handler.NewClient(db), handler.ValidSession)
 	app.POST("/update-client", handler.UpdateClient(db), handler.ValidSession)
-	app.POST("/email-client", handler.EmailClient(db, sendmail, defaultEmailSubject, defaultEmailContent), handler.ValidSession)
+	app.POST("/email-client", handler.EmailClient(db, mail, defaultEmailSubject, defaultEmailContent), handler.ValidSession)
 	app.POST("/client/set-status", handler.SetClientStatus(db), handler.ValidSession)
 	app.POST("/remove-client", handler.RemoveClient(db), handler.ValidSession)
 	app.GET("/download", handler.DownloadClient(db), handler.ValidSession)
